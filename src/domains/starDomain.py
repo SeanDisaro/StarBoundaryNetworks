@@ -76,7 +76,7 @@ class StarDomain:
 
         return x
     
-    def generateRandomPointsFullDomain(self, numPoints ):
+    def generateSphericalRandomPointsFullDomain(self, numPoints ):
         randomSpherical = torch.rand((numPoints, self.dim))
         randomSpherical[:,-1] = randomSpherical[:,-1] *2*torch.pi
         for i in range(self.dim -2):
@@ -86,7 +86,20 @@ class StarDomain:
         radius = randomSpherical[:,0] * max_radius
         return self.getCartesianCoordinates(radius, angles)
     
-    def generateRandomPointsOnBoundary(self, numPoints ):
+    def generateCartesianRandomPointsFullDomain(self, numPoints):
+        randomUnitQube = torch.rand((numPoints, self.dim))
+        randomCoverQube = randomUnitQube - torch.full((numPoints, self.dim), 0.5)
+        randomCoverQube = randomCoverQube * 2*self.maxRadius
+        randomCoverQube = randomCoverQube + self.center.tile((numPoints, 1))
+        maskKeep = torch.zeros((numPoints), dtype= bool)
+        for i in range(numPoints):
+            if self.isInDomainCartesian(randomCoverQube[i].view(1,-1)):
+                maskKeep[i] = True
+
+        return randomCoverQube[maskKeep.nonzero().view(-1)]
+
+    
+    def generateSphericalRandomPointsOnBoundary(self, numPoints ):
         randomSpherical = torch.rand((numPoints, self.dim))
         randomSpherical[:,-1] = randomSpherical[:,-1] *2*torch.pi
         for i in range(self.dim -2):
@@ -106,6 +119,7 @@ class Sphere(StarDomain):
     def __init__(self, dim, center, radius):
         super().__init__( dim, center)
         self.radius = radius
+        self.maxRadius = radius
 
 
     def radiusDomainFunciton(self, angles):
@@ -160,7 +174,7 @@ class HyperCuboid(StarDomain):
 
 
 #testSphere3D = Sphere(3, [0.,0.,0.],1.)
-testSphere2D = Sphere(2, [0.,0.],1.)
+#testSphere2D = Sphere(2, torch.tensor([0.,0.]),torch.tensor(1.))
 
 #fig = plt.figure()
 
@@ -168,7 +182,8 @@ testSphere2D = Sphere(2, [0.,0.],1.)
 #qube3D = HyperCuboid(3, [0.,0.,0.], torch.tensor([1.,1.,1.]))
 
 #spherePoints3D = testSphere3D.generateRandomPointsOnBoundary(10000) #generateRandomPointsSphere(2,100000, 1., 0. )
-spherePoints2D = testSphere2D.generateRandomPointsFullDomain(10000)
+#spherePoints2D = testSphere2D.generateRandomPointsFullDomain(10000)
+#spherePoints2D = testSphere2D.generateCartesianRandomPointsFullDomain(10000)
 #qubePoints2D = qube2D.generateRandomPointsFullDomain(10000)
 #qubePoints3D = qube3D.generateRandomPointsFullDomain(10000)
 
@@ -185,6 +200,6 @@ ax.plot3D(spherePointsNP[:,0], spherePointsNP[:,1], spherePointsNP[:,2])
 '''
 
 #plt.scatter(qubePoints2D[:,0],qubePoints2D[:,1])
-plt.scatter(spherePoints2D[:,0],spherePoints2D[:,1])
+#plt.scatter(spherePoints2D[:,0],spherePoints2D[:,1])
 
-plt.show()
+#plt.show()
