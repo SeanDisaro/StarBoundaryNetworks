@@ -29,6 +29,7 @@ class StarDomain:
             return False
 
     def getSphericalCoordinates(self, x):
+        #this function has a bug
         batchSize = x.shape[0]
         for i in range(self.dim):
             mask = torch.zeros_like(x)
@@ -41,9 +42,12 @@ class StarDomain:
 
         auxAngles = torch.pow(r,2) - torch.pow(x[:,0],2)
 
-        for i in range(self.dim-1):
+        for i in range(self.dim-2):
             angles[:,i] = torch.atan2(torch.sqrt(auxAngles), x[:,i])
             auxAngles = auxAngles - torch.pow(x[:,i+1],2)
+
+        angles[:,-1] = torch.atan2(x[:,-1], x[:,-2])
+
 
         return r, angles
 
