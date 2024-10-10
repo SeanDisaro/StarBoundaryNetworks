@@ -19,10 +19,11 @@ class StarDomain:
 
     def isInDomainCartesian(self, x):
         radius, angles = self.getSphericalCoordinates(x)
-
         return self.isInDomainSpherical(radius, angles)
 
     def isInDomainSpherical(self, radius, angles):
+        if self.radiusDomainFunciton(angles) <= 0:
+            pass
         if radius <= self.radiusDomainFunciton(angles):
             return True
         else:
@@ -136,6 +137,7 @@ class HyperCuboid(StarDomain):
     def __init__(self, dim, center, sideLengths):
         super().__init__(dim, center)
         self.sideLengths = sideLengths
+        self.maxRadius = torch.norm(sideLengths*0.5)
 
 
     def radiusDomainFunciton(self, angles):
@@ -154,21 +156,23 @@ class HyperCuboid(StarDomain):
         biggerAlphaMask = smallerAlphaMask == 0
         r_n = r_n + biggerAlphaMask*(self.sideLengths[1]/2) / torch.cos((torch.pi/2 - twoPiAngle )* biggerAlphaMask)
 
+        for i in range(self.dim - 2):
+            newAngle = angles[:,i]
+            newSide = self.sideLengths[2+i]
+            newRad = torch.zeros_like(r_n)
+            auxAngles = torch.arctan(2* r_n /newSide)
 
-        for i in range(self.dim-2):
-            newAnlge = angles[:, i]
-            newSideLength = self.sideLengths[2+i]
+            biggerThanPiHalfMask = newAngle > torch.pi/2
+            newAngle = torch.pi * biggerThanPiHalfMask - newAngle*biggerThanPiHalfMask + newAngle*(biggerThanPiHalfMask == 0)
 
-            biggerThanPiHalfMask = newAnlge > torch.pi/2
-            newAnlge = torch.pi * biggerThanPiHalfMask - newAnlge*biggerThanPiHalfMask + newAnlge*(biggerThanPiHalfMask ==0)
+            
+            smallerAuxAngleMask = newAngle <= auxAngles
+            biggerAuxAngleMask = smallerAuxAngleMask == 0
 
-            alpha = torch.arctan(newSideLength/(2*r_n)) 
+            newRad = smallerAuxAngleMask*(newSide/2)/torch.cos(newAngle*smallerAuxAngleMask)
+            newRad = newRad + biggerAuxAngleMask*(r_n / torch.cos((torch.pi /2 - newAngle)* biggerAuxAngleMask))
 
-            smallerAlphaMask = newAnlge <= alpha
-            biggerAlphaMask = smallerAlphaMask == 0
-            r_n = r_n *biggerAlphaMask #+ (r_n*smallerAlphaMask / torch.cos(newAnlge * smallerAlphaMask) )
-            r_n = r_n*smallerAlphaMask + (newSideLength*0.5*biggerAlphaMask / torch.cos((torch.pi/2 - newAnlge) * biggerAlphaMask) )
-
+            r_n = newRad
 
         return r_n
 
@@ -177,31 +181,32 @@ class HyperCuboid(StarDomain):
 
 
 
-#testSphere3D = Sphere(3, [0.,0.,0.],1.)
+#testSphere3D = Sphere(3, torch.tensor([0.,0.,0.]),torch.tensor(1.))
 #testSphere2D = Sphere(2, torch.tensor([0.,0.]),torch.tensor(1.))
 
 #fig = plt.figure()
 
-#qube2D = HyperCuboid(2, [0.,0.], torch.tensor([1.,1.]))
-#qube3D = HyperCuboid(3, [0.,0.,0.], torch.tensor([1.,1.,1.]))
+#qube2D = HyperCuboid(2, torch.tensor([0.,0.]), torch.tensor([1.,1.]))
+#qube3D = HyperCuboid(3, torch.tensor([0.,0.,0.]), torch.tensor([1.,1.,1.]))
 
-#spherePoints3D = testSphere3D.generateRandomPointsOnBoundary(10000) #generateRandomPointsSphere(2,100000, 1., 0. )
+#spherePoints3D = testSphere3D.generateCartesianRandomPointsFullDomain(10000) #generateRandomPointsSphere(2,100000, 1., 0. )
 #spherePoints2D = testSphere2D.generateRandomPointsFullDomain(10000)
 #spherePoints2D = testSphere2D.generateCartesianRandomPointsFullDomain(10000)
-#qubePoints2D = qube2D.generateRandomPointsFullDomain(10000)
-#qubePoints3D = qube3D.generateRandomPointsFullDomain(10000)
+#qubePoints2D = qube2D.generateSphericalRandomPointsOnBoundary(1000)
+#qubePoints3D, realQube = qube3D.generateCartesianRandomPointsFullDomain(10000)
+
 
 #qubePointsNP = torch.Tensor.numpy(qubePoints3D)
 #ax = fig.add_subplot(projection='3d')
-#ax.plot3D(qubePointsNP[:,0], qubePointsNP[:,1], qubePointsNP[:,2],c = 'b')
+#ax.scatter(qubePointsNP[:,0], qubePointsNP[:,1], qubePointsNP[:,2],c = 'b')
 #realQube = np.random.uniform(-0.5,0.5,(10000,3))
-#ax.plot3D(realQube[:,0], realQube[:,1], realQube[:,2],c = 'r')
+#ax.scatter(realQube[:,0], realQube[:,1], realQube[:,2],c = 'r')
 
-'''
-spherePointsNP = torch.Tensor.numpy(spherePoints)
-ax = fig.add_subplot(projection='3d')
-ax.plot3D(spherePointsNP[:,0], spherePointsNP[:,1], spherePointsNP[:,2])
-'''
+
+#spherePointsNP = torch.Tensor.numpy(spherePoints3D)
+#ax = fig.add_subplot(projection='3d')
+#ax.plot3D(spherePointsNP[:,0], spherePointsNP[:,1], spherePointsNP[:,2])
+
 
 #plt.scatter(qubePoints2D[:,0],qubePoints2D[:,1])
 #plt.scatter(spherePoints2D[:,0],spherePoints2D[:,1])
