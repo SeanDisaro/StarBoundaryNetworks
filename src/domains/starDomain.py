@@ -181,39 +181,3 @@ class HyperCuboid(StarDomain):
         
 
 
-
-
-#testSphere3D = Sphere(3, torch.tensor([0.,0.,0.]),torch.tensor(1.))
-#testSphere2D = Sphere(2, torch.tensor([0.,0.]),torch.tensor(1.))
-
-fig = plt.figure()
-
-#qube2D = HyperCuboid(2, torch.tensor([0.,0.]), torch.tensor([1.,1.]))
-qube3D = HyperCuboid(3, torch.tensor([0.,0.,0.]), torch.tensor([1.,1.,1.]))
-
-#spherePoints3D = testSphere3D.generateSphericalRandomPointsOnBoundary(10000)
-#spherePoints2D = testSphere2D.generateCartesianRandomPointsFullDomain(10000)
-#spherePoints2D = testSphere2D.generateCartesianRandomPointsFullDomain(10000)
-#qubePoints2D = qube2D.generateSphericalRandomPointsFullDomain(1000)
-qubePoints3D = qube3D.generateCartesianRandomPointsFullDomain(10000)
-
-
-
-qubePointsNP = torch.Tensor.numpy(qubePoints3D)
-ax = fig.add_subplot(projection='3d')
-ax.scatter(qubePointsNP[:,0], qubePointsNP[:,1], qubePointsNP[:,2],c = 'b')
-
-#realQube = np.random.uniform(-0.5,0.5,(10000,3))
-#ax.scatter(realQube[:,0], realQube[:,1], realQube[:,2],c = 'r')
-
-
-#spherePointsNP = torch.Tensor.numpy(spherePoints3D)
-#ax = fig.add_subplot(projection='3d')
-#ax.scatter(spherePointsNP[:,0], spherePointsNP[:,1], spherePointsNP[:,2])
-
-
-#plt.scatter(qubePoints2D[:,0],qubePoints2D[:,1])
-#plt.scatter(fullQube[:,0],fullQube[:,1], c = 'red')
-#plt.scatter(spherePoints2D[:,0],spherePoints2D[:,1])
-
-plt.show()
