@@ -43,8 +43,8 @@ class ImposedStarDeepONet(nn.Module):
     radius, angles = self.domain.getSphericalCoordinates(input)
     return (self.boundaryConditionSpherical( angles) *  (1- self.radialDecayFunciton( radius / self.domain.radiusDomainFunciton(angles)))).view(-1,1)
   
-  def forward(self, domainPoints):
-    x = domainPoints
+  def forward(self, input):
+    x = input
    
     x = self.in_layer(x)
    
