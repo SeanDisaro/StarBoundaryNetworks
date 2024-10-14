@@ -105,3 +105,17 @@ def divergenceOnlySpace(f, xgrid, tgrid):
         dx = torch.autograd.grad(outf[:,i].view(-1,1), xgrid, torch.ones((batchSize, 1), requires_grad=True), create_graph=True)[0]
         div = dx[:,i].view(-1,1) + div
     return div
+
+def gradientOfDivergenceOnlySpace(f, xgrid, tgrid):
+    dim = xgrid.shape[1]
+    batchSize = xgrid.shape[0]
+    outf = f(xgrid, tgrid)
+    div = torch.torch.zeros((batchSize, 1), dtype=float, requires_grad=True)
+
+    for i in range(dim): 
+        dx = torch.autograd.grad(outf[:,i].view(-1,1), xgrid, torch.ones((batchSize, 1), requires_grad=True), create_graph=True)[0]
+        div = dx[:,i].view(-1,1) + div
+    
+    gradient = torch.autograd.grad(div, xgrid, torch.ones((batchSize, 1), requires_grad=True), create_graph=True)
+
+    return gradient
