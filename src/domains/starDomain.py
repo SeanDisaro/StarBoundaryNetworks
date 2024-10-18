@@ -77,7 +77,7 @@ class StarDomain:
         for i in range(self.dim):
             mask = torch.zeros_like(x)
             mask[:,i] = 1 
-            x = x - mask*self.center[i]
+            x = x + mask*self.center[i]
 
         return x
     
@@ -113,6 +113,7 @@ class StarDomain:
             randomSpherical[:, 1+i] = randomSpherical[:, 1+i]* torch.pi
         angles = randomSpherical[:,1:]
         max_radius = self.radiusDomainFunciton(angles)
+
         return self.getCartesianCoordinates(max_radius, angles)
 
 
