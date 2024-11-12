@@ -6,15 +6,19 @@ import math
 import numpy as np
 
 class StarDomain:
-
-
-    def __init__(self, dim, center):
+    def __init__(self, dim, center, device = "cpu")->object:
         self.dim = dim
-        self.center = center
+        self.center = center.to(device)
+        self.device = device
+
+    @abstractmethod
+    def updateDevice(self, device):
+        pass
 
     @abstractmethod
     def radiusDomainFunciton(self, angles):
         pass
+    
 
 
     def isInDomainCartesian(self, x):
@@ -29,17 +33,19 @@ class StarDomain:
         else:
             return False
 
-    def getSphericalCoordinates(self, x):
-        #this function has a bug
+    def getSphericalCoordinates(self, input):
+        x = torch.cat(input, dim = 1)
+
         batchSize = x.shape[0]
+
         for i in range(self.dim):
             mask = torch.zeros_like(x)
             mask[:,i] = 1 
             x = x - mask*self.center[i]
 
-        r = torch.linalg.vector_norm(x, axis = 1)
+        r = torch.linalg.vector_norm(x, axis = 1).view(-1,1)
 
-        angles = torch.empty(batchSize, self.dim - 1)
+        angles = torch.empty(batchSize, self.dim - 1, device= self.device)
 
         auxAngles = torch.pow(r,2) - torch.pow(x[:,0],2)
 
@@ -49,70 +55,68 @@ class StarDomain:
 
         angles[:,-1] = torch.atan2(x[:,-1], x[:,-2])
 
-
         return r, angles
 
     def getCartesianCoordinates(self, radius, angles):
         batchSize = radius.shape[0]
-        x = torch.ones(batchSize, self.dim)
-        
+        cartesianCoordinates = []
+
         for i in range(self.dim):
+            xi = torch.ones(batchSize, 1, device= self.device)
             for j in range(i):
-                mask = torch.zeros_like(x)
-                mask[: , i] = 1
-                x = x * (mask == 0) + x*mask * torch.sin(angles[:,j]).view(-1, 1).tile(self.dim)
-                #x[:,i] = x[:,i]* torch.sin(angles[:,j])
-
+                xi = xi* (torch.sin(angles[:,j]).view(-1,1))
             if i == self.dim -1:
-                mask = torch.zeros_like(x)
-                mask[: , i] = 1
-                x = x * (mask == 0) + x*mask * radius.view(-1, 1).tile(self.dim)
-                #x[:,i] = x[:,i]*radius
+                xi = xi*radius
             else:
-                mask = torch.zeros_like(x)
-                mask[: , i] = 1
-                x = x * (mask == 0) + x*mask * radius.view(-1, 1).tile(self.dim) * torch.cos(angles[:,i]).view(-1, 1).tile(self.dim)
-                #x[:,i] = x[:,i]*radius * torch.cos(angles[:,i])
+                xi = xi*radius* (torch.cos(angles[:,i]).view(-1,1))
+            cartesianCoordinates.append(xi)
 
         for i in range(self.dim):
-            mask = torch.zeros_like(x)
-            mask[:,i] = 1 
-            x = x + mask*self.center[i]
+            cartesianCoordinates[i] = cartesianCoordinates[i] + self.center[i]
 
-        return x
+        return cartesianCoordinates
     
     def generateSphericalRandomPointsFullDomain(self, numPoints ):
-        randomSpherical = torch.rand((numPoints, self.dim))
+        randomSpherical = torch.rand((numPoints, self.dim), device = self.device)
         randomSpherical[:,-1] = randomSpherical[:,-1]-0.5
         randomSpherical[:,-1] = randomSpherical[:,-1] *2*torch.pi
         for i in range(self.dim -2):
             randomSpherical[:, 1+i] = randomSpherical[:, 1+i]* torch.pi
         angles = randomSpherical[:,1:]
         max_radius = self.radiusDomainFunciton(angles)
-        radius = randomSpherical[:,0] * max_radius
+        radius = (randomSpherical[:,0].view(-1,1) * max_radius).view(-1,1)
         return self.getCartesianCoordinates(radius, angles)
     
     def generateCartesianRandomPointsFullDomain(self, numPoints):
-        randomUnitQube = torch.rand((numPoints, self.dim))
-        randomCoverQube = randomUnitQube - torch.full((numPoints, self.dim), 0.5)
+        randomUnitQube = torch.rand((numPoints, self.dim), device= self.device)  
+        randomCoverQube = randomUnitQube - torch.full((numPoints, self.dim), 0.5, device= self.device)
         randomCoverQube = randomCoverQube * 2*self.maxRadius
         randomCoverQube = randomCoverQube + self.center.tile((numPoints, 1))
-        maskKeep = torch.zeros((numPoints), dtype= bool)
+        randomCoverQubeSingCoord = []
+        for i in range(self.dim):
+            randomCoverQubeSingCoord.append(randomCoverQube[:,i])
+        maskKeep = torch.zeros((numPoints), dtype= bool, device= self.device)
         for i in range(numPoints):
-            if self.isInDomainCartesian(randomCoverQube[i].view(1,-1)):
+            point = [randomCoverQubeSingCoord[k][i].view(1,1) for k in range(self.dim)]
+            if self.isInDomainCartesian(point):
                 maskKeep[i] = True
 
-        return randomCoverQube[maskKeep.nonzero().view(-1)]
+        pointsToKeep = randomCoverQube[maskKeep.nonzero().view(-1)]
+        finalPointsToKeep= []
+        for i in range(self.dim):
+            finalPointsToKeep.append(pointsToKeep[:,i].view(-1,1))
+
+        return finalPointsToKeep
 
     
     def generateSphericalRandomPointsOnBoundary(self, numPoints ):
-        randomSpherical = torch.rand((numPoints, self.dim))
+        randomSpherical = torch.rand((numPoints, self.dim), device= self.device)
         randomSpherical[:,-1] = randomSpherical[:,-1]-0.5
         randomSpherical[:,-1] = randomSpherical[:,-1] *2*torch.pi
         for i in range(self.dim -2):
             randomSpherical[:, 1+i] = randomSpherical[:, 1+i]* torch.pi
         angles = randomSpherical[:,1:]
-        max_radius = self.radiusDomainFunciton(angles)
+        max_radius = self.radiusDomainFunciton(angles).view(-1,1)
 
         return self.getCartesianCoordinates(max_radius, angles)
 
@@ -122,26 +126,33 @@ class StarDomain:
 
 
 class Sphere(StarDomain):
-
-
-    def __init__(self, dim, center, radius):
-        super().__init__( dim, center)
-        self.radius = radius
-        self.maxRadius = radius
+    def __init__(self, dim, center, radius, device = "cpu"):
+        super().__init__( dim, center, device = device)
+        self.radius = radius.to(device)
+        self.maxRadius = radius.to(device)
+    
+    def updateDevice(self, device):
+        self.center.to(device)
+        self.radius.to(device)
+        self.device = device
 
 
     def radiusDomainFunciton(self, angles):
-        return torch.full((angles.shape[0],1), self.radius).view(angles.shape[0])
+        return torch.full((angles.shape[0],1), self.radius, device= self.device)
 
 
 
     
 class HyperCuboid(StarDomain):
-    def __init__(self, dim, center, sideLengths):
-        super().__init__(dim, center)
-        self.sideLengths = sideLengths
-        self.maxRadius = torch.norm(sideLengths*0.5)
+    def __init__(self, dim, center, sideLengths, device = "cpu"):
+        super().__init__(dim, center, device = device)
+        self.sideLengths = sideLengths.to(device)
+        self.maxRadius = torch.norm(sideLengths*0.5).to(device)
 
+    def updateDevice(self, device):
+        self.center.to(device)
+        self.sideLengths.to(device)
+        self.device = device
 
     def radiusDomainFunciton(self, angles):
         alpha = torch.arctan(self.sideLengths[-1]/ self.sideLengths[-2] ) 
@@ -177,8 +188,10 @@ class HyperCuboid(StarDomain):
 
             r_n = newRad
 
-        return r_n
+        return r_n.view(-1,1)
 
         
+
+
 
 

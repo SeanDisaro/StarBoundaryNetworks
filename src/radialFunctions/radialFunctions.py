@@ -1,16 +1,11 @@
 import torch
 
 def linearRadial(x):
-    return 1-x
+    return (1-x).view(-1,1)
 
 def squareRoot(x):
-    return 1-torch.sqrt(x)
+    return (1-torch.sqrt(x)).view(-1,1)
 
 def squaredRadial(x):
-    return 1 - x*x
+    return (1 - x*x).view(-1,1)
 
-def fraqLog(x):
-    if(x> 1/torch.e ):
-        return 1
-    else:
-        return 1/torch.log(x)

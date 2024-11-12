@@ -1,5 +1,5 @@
 import torch
-from src.pdeOperators.operators import *
+from pdeOperators.operators import *
 
 
 
@@ -16,11 +16,12 @@ def burgersEquationLoss(u, xgrid, tgrid, nu , cuda = False):
 
 def poissonEquationLoss(u, xgrid, poissonData, cuda = False):
     #poisson eq: laplace(u)+ poissonDataFunction = 0
-    laplacian_u = laplacian(u, xgrid)
+    uOut = u(xgrid)
+    laplacian_u = laplacian(uOut, xgrid)
     dataOut = poissonData(xgrid)
     return torch.mean(torch.norm(laplacian_u + dataOut, dim = 1))
 
-def darcyFlow(u, xgrid, diffCoefFunc, forcingFunc, cuda = False ):
+def darcyFlowLoss(u, xgrid, diffCoefFunc, forcingFunc, cuda = False ):
     #darcyFlow: forcingFunc + divergence((diffCoef*grad(u)) = 0
     uOut = u(xgrid)
     diffCoefFuncOut = diffCoefFunc(xgrid)
@@ -30,4 +31,8 @@ def darcyFlow(u, xgrid, diffCoefFunc, forcingFunc, cuda = False ):
 
     return torch.mean(torch.norm(forcingFuncOut + divOfCoeffGrad, dim = 1))
 
+def laplaceEquationLoss(u, xgrid, cuda = False):
+    uOut = u(xgrid)
+    laplacian_u = laplacian(uOut, xgrid)
+    return torch.mean(torch.norm(laplacian_u , dim = 1))
 
