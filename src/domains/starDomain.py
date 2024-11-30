@@ -132,8 +132,8 @@ class Sphere(StarDomain):
         self.maxRadius = radius.to(device)
     
     def updateDevice(self, device):
-        self.center.to(device)
-        self.radius.to(device)
+        self.center = self.center.to(device)
+        self.radius = self.radius.to(device)
         self.device = device
 
 
@@ -150,8 +150,8 @@ class HyperCuboid(StarDomain):
         self.maxRadius = torch.norm(sideLengths*0.5).to(device)
 
     def updateDevice(self, device):
-        self.center.to(device)
-        self.sideLengths.to(device)
+        self.center = self.center.to(device)
+        self.sideLengths = self.sideLengths.to(device)
         self.device = device
 
     def radiusDomainFunciton(self, angles):
