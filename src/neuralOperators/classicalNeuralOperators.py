@@ -119,17 +119,13 @@ class DeepONetSphere2D_DomainFuncToSol(nn.Module):
 
 
 class DeepONetSphere2D_ParabDBDCondToSol(nn.Module):
-  def __init__(self,  n_hidden_trunk, n_layers_trunk, n_hidden_branch, n_layers_branch, fixDomPoints, boundaryPoints, timeGrid):
+  def __init__(self,  n_hidden_trunk, n_layers_trunk, n_hidden_branch, n_layers_branch, parabBDPointsSpace, parabBDPointsTime):
     super().__init__()
 
-    self.fixDomainPoints = fixDomPoints
-    self.nFixDomPoints = fixDomPoints[0].shape[0]
-    
-    self.boundaryPoints = boundaryPoints
-    self.nboundaryPoints = boundaryPoints[0].shape[0]
+    self.parabBDPointsSpace = parabBDPointsSpace
+    self.nParabBDPoints = parabBDPointsSpace[0].shape[0]
 
-    self.timeGrid = timeGrid
-    self.nTimeGrid = timeGrid.shape[0]
+    self.parabBDPointsTime = parabBDPointsTime
 
     nmax = max(n_hidden_branch, n_hidden_trunk)
 
@@ -144,7 +140,7 @@ class DeepONetSphere2D_ParabDBDCondToSol(nn.Module):
     self.out_layer_trunk = nn.Linear(n_hidden_trunk,nmax)
 
     #specify BranchNet
-    self.in_layer_branch = nn.Sequential(*[nn.Linear(self.nFixDomPoints + self.nboundaryPoints *self.nTimeGrid  ,n_hidden_branch)])
+    self.in_layer_branch = nn.Sequential(*[nn.Linear(self.nParabBDPoints ,n_hidden_branch)])
     self.hid_layers_branch = nn.Sequential(*[
         nn.Sequential(*[
             nn.Linear(n_hidden_branch, n_hidden_branch),
@@ -157,22 +153,20 @@ class DeepONetSphere2D_ParabDBDCondToSol(nn.Module):
     
   def updateDevice(self, device):
     self.to(device)
-    self.fixDomainPoints[0] = self.fixDomainPoints[0].to(device)
-    self.fixDomainPoints[1] = self.fixDomainPoints[1].to(device)
-    self.timeGrid = self.timeGrid.to(device)
-    self.boundaryPoints[0] = self.boundaryPoints[0].to(device)
-    self.boundaryPoints[1] = self.boundaryPoints[1].to(device)
+    self.parabBDPointsSpace[0] = self.parabBDPointsSpace[0].to(device)
+    self.parabBDPointsSpace[1] = self.parabBDPointsSpace[1].to(device)
+    self.parabBDPointsTime = self.parabBDPointsTime.to(device)
 
   
-  def forward(self, domainPoints,timePoints,  funcOnDomain, funcOnBoundarytimesTime):
+  def forward(self, domainPoints,timePoints, parabBDFunction):
     trunk = torch.cat((domainPoints[0],domainPoints[1], timePoints), dim= 1)
     trunk = self.in_layer_trunk(trunk)
     trunk = self.hid_layers_trunk(trunk)
     trunk = self.out_layer_trunk(trunk)
 
     batchSize = trunk.shape[0]
-    outFuncOnBoundarytimesTime
-    branch = torch.cat((funcOnDomain(self.fixDomainPoints),funcOnBoundarytimesTime(self.boundaryPoints, self.timeGrid))).view(1,-1)
+
+    branch = parabBDFunction(self.parabBDPointsSpace ,  self.parabBDPointsTime).view(1, -1)
     branch = self.in_layer_branch(branch)
     branch = self.hid_layers_branch(branch)
     branch = self.out_layer_branch(branch)
