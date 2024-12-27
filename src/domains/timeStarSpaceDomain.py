@@ -12,6 +12,12 @@ class timeStarSpaceDomain:
 
 
     def updateDevice(self, device:str):
+        '''
+        This function changes the device of the domain, i.e. points are generated in ram or vram.
+
+        args:
+            device: the new device you want to have
+        '''
         self.spaceDom.updateDevice(device)
         self.endTime.to(device)
         self.device = device
